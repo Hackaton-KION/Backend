@@ -1,0 +1,73 @@
+{
+	"env": {
+		"browser": true,
+		"es2021": true
+	},
+	"extends": [
+		"eslint:recommended",
+		"plugin:sonarjs/recommended",
+		"plugin:import/recommended",
+		"plugin:import/warnings",
+		"airbnb-base",
+		"prettier"
+	],
+  "plugins": ["sonarjs"],
+	"parserOptions": {
+		"ecmaFeatures": {
+			"jsx": true
+		},
+		"ecmaVersion": "latest",
+		"sourceType": "module"
+	},
+	"rules": {
+		/* STANDARD */
+		"no-use-before-define": "off",
+		"no-tabs": "off",
+		"indent": [
+			"error",
+			"tab",
+			{
+				"SwitchCase": 1
+			}
+		],
+		"jsx-quotes": ["error", "prefer-single"],
+		"linebreak-style": "off",
+		"no-param-reassign": "off",
+		"implicit-arrow-linebreak": "off",
+		"consistent-return": "off",
+		"no-unused-vars": "off",
+		"arrow-body-style": "off",
+		"object-curly-newline": "off",
+		"comma-dangle": [
+			"warn",
+			{
+				"arrays": "never",
+				"objects": "always",
+				"imports": "never",
+				"exports": "never",
+				"functions": "never"
+			}
+		],
+		"no-restricted-exports": "off",
+		"prefer-arrow-callback": "off",
+		"no-shadow": "off",
+		"default-param-last": "warn",
+
+		/* IMPORT */
+		"import/extensions": [
+			"error",
+			"never",
+			{
+				"svg": "always",
+				"webp": "always",
+				"png": "always",
+				"jpeg": "always",
+				"jpg": "always",
+				"avif": "always",
+				"css": "always"
+			}
+		],
+		"import/no-unresolved": 0,
+		"import/prefer-default-export": "off"
+	}
+}
