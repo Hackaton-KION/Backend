@@ -40,8 +40,6 @@ function createTableUsers() {
 			timestamps: false,
 		}
 	);
-
-	console.log(Users === sequelize.models.Users); // true
 }
 function createTableFilms() {
 	const Films = sequelize.define(
@@ -78,8 +76,6 @@ function createTableFilms() {
 			timestamps: false,
 		}
 	);
-
-	console.log(Films === sequelize.models.Films); // true
 }
 function createTablePresets() {
 	const Presets = sequelize.define(
@@ -99,6 +95,10 @@ function createTablePresets() {
 					model: sequelize.models.Users,
 					key: 'id',
 				},
+			},
+			name: {
+				type: DataTypes.STRING,
+				allowNull: false,
 			},
 			brightness: {
 				type: DataTypes.INTEGER,
@@ -126,8 +126,6 @@ function createTablePresets() {
 			timestamps: false,
 		}
 	);
-
-	console.log(Presets === sequelize.models.Presets); // true
 }
 
 async function createTables() {
@@ -152,25 +150,24 @@ async function createTestWrite(data) {
 
 const app = express();
 app.use(json());
-app.get('/ping', function (req, res) {
-	console.log(req.body);
-	res.json(req.body);
+app.get('/api/ping', function (req, res) {
+	res.json('pong');
 });
-app.post('/testPost', async (req, res) => {
+app.post('/api/testPost', async (req, res) => {
 	console.log(req.body);
 	const returnedValue = await createTestWrite(req.body);
 	console.log({ returned: returnedValue.replaceAll('"', "'") });
 	// res.send({ returned: returnedValue.replaceAll('"', 	"'") });
 	res.json(returnedValue.replaceAll('"', "'"));
 });
-app.post('/authorization', async (req, res) => {
+app.post('/api/Users/authorization', async (req, res) => {
 	const responseFromDB = await sequelize.models.Users.findOne({
 		where: { login: req.body.login },
 	});
 	console.log(typeof responseFromDB.dataValues.password);
 	console.log(await hash(req.body.password));
 
-	console.log(req.headers.cookie.split(';'));
+	// console.log(req.headers.cookie.split(';'));
 
 	if (await verify(responseFromDB.dataValues.password, req.body.password)) {
 		// Ваши данные для создания токена (payload)
@@ -191,7 +188,11 @@ app.post('/authorization', async (req, res) => {
 			expiresIn: '30d',
 		});
 
-		res.setHeader('Set-Cookie', `refreshToken=${refreshToken}`);
+		res.cookie('refreshToken', refreshToken, {
+			expires: new Date(Date.now() + 30 * 24 * 3600000),
+			httpOnly: true,
+			secure: true,
+		});
 
 		res.json({
 			accessToken: accessToken,
@@ -201,5 +202,97 @@ app.post('/authorization', async (req, res) => {
 	} else {
 		res.json('Неверный пароль');
 	}
+});
+app.get('/api/Presets/getPresets', async (req, res) => {
+	try {
+		Jwt.verify(
+			req.headers.authorization,
+			process.env.SECRET,
+			async (error, decoded) => {
+				if (error) {
+					throw 'Bad access token';
+				} else {
+					const responseFromDB = await sequelize.models.Presets.findAll({
+						where: { idUser: decoded.userID },
+					});
+
+					res.json({ profiles: responseFromDB });
+				}
+			}
+		);
+	} catch (error) {
+		res.json(error);
+	}
+});
+app.post('/api/Presets/savePreset', async (req, res) => {
+	Jwt.verify(
+		req.headers.authorization,
+		process.env.SECRET,
+		async (error, decoded) => {
+			if (error) {
+				res.json(error);
+			} else {
+				try {
+					await sequelize.models.Presets.create({
+						idUser: decoded.userID,
+						name: req.body.name,
+						brightness: req.body.brightness,
+						contrast: req.body.contrast,
+						saturation: req.body.saturation,
+						sharpness: req.body.sharpness,
+						epilepticSafe: req.body.epilepticSafe,
+					});
+					res.json('ok');
+				} catch (error) {
+					console.log(error);
+					console.log(error.parent.detail);
+					res.json(error.parent.detail);
+				}
+			}
+		}
+	);
+});
+app.put('/api/Presets/changePreset', async (req, res) => {
+	Jwt.verify(
+		req.headers.authorization,
+		process.env.SECRET,
+		async (error, decoded) => {
+			if (error) {
+				res.json(error);
+			} else {
+				const responseFromDB = await sequelize.models.Presets.findAll({
+					where: { idUser: decoded.userID },
+				});
+				await sequelize.models.Presets.update(
+					{
+						name: req.body.name || responseFromDB.name,
+						brightness: req.body.brightness || responseFromDB.brightness,
+						contrast: req.body.contrast || responseFromDB.contrast,
+						saturation: req.body.saturation || responseFromDB.saturation,
+						epilepticSafe:
+							req.body.epilepticSafe || responseFromDB.epilepticSafe,
+					},
+					{ where: { idPreset: req.body.idPreset } }
+				);
+				res.json('ok');
+			}
+		}
+	);
+});
+app.delete('/api/Presets/deletePreset', async (req, res) => {
+	Jwt.verify(
+		req.headers.authorization,
+		process.env.SECRET,
+		async (error, decoded) => {
+			if (error) {
+				res.json(error);
+			} else {
+				await sequelize.models.Presets.destroy({
+					where: { idPreset: req.body.idPreset, idUser: decoded.userID },
+				});
+				res.json('ok');
+			}
+		}
+	);
 });
 app.listen(5000);
