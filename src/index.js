@@ -1,10 +1,13 @@
 import * as dotenv from 'dotenv';
-dotenv.config();
 import express, { json } from 'express';
-import { Sequelize, DataTypes } from 'sequelize';
+import { Sequelize, DataTypes, Op } from 'sequelize';
 import { hash, verify } from 'argon2';
 import Jwt from 'jsonwebtoken';
-
+import ffmpeg from 'fluent-ffmpeg';
+import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
+import cors from 'cors';
+ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+dotenv.config();
 // Connect to database
 const sequelize = new Sequelize('KION_Server', 'postgres', '1234', {
 	host: 'localhost',
@@ -148,11 +151,146 @@ async function createTestWrite(data) {
 	}
 }
 
+function generateRandomId(countRandomFilms) {
+	return Math.floor(Math.random() * countRandomFilms);
+}
+
 const app = express();
+
 app.use(json());
-app.get('/api/ping', function (req, res) {
+app.use(cors());
+app.use('/static', express.static('assets'));
+
+//api
+
+//get
+app.get('/', (req, res) => {
+	res.sendFile('C:/Users/egorp/OneDrive/Документы/Backend/src/index.html');
+});
+app.get('/api/ping', (req, res) => {
 	res.json('pong');
 });
+app.get('/api/Presets/getPresets', async (req, res) => {
+	try {
+		Jwt.verify(
+			req.headers.authorization,
+			process.env.SECRET,
+			async (error, decoded) => {
+				if (error) {
+					throw 'Bad access token';
+				} else {
+					const responseFromDB = await sequelize.models.Presets.findAll({
+						where: { idUser: decoded.userID },
+					});
+
+					res.json({ profiles: responseFromDB });
+				}
+			}
+		);
+	} catch (error) {
+		res.json(error);
+	}
+});
+app.get('/api/Films/', async (req, res) => {
+	const responseFromDB = await sequelize.models.Films.findAll({
+		where: {
+			title: {
+				[Op.iLike]: `%${req.query.title || ''}%`,
+			},
+		},
+	});
+	res.json(responseFromDB);
+});
+app.get('/api/Films/random', async (req, res) => {
+	const responseFromDB = await sequelize.models.Films.findAll({
+		limit: 100,
+	});
+
+	const countRandomFilms = 5;
+
+	const allId = [];
+	responseFromDB.forEach((element) => {
+		allId.push(element.id);
+	});
+	const randomIdArray = [];
+	const forResponse = [];
+
+	for (let i = 0; i < countRandomFilms; i++) {
+		// const forResponse = [];
+		// const randomId = allId[generateRandomId()];
+		// console.log(randomId);
+		// forResponse.push(responseFromDB[randomId]);
+		let randomId;
+		do {
+			randomId = generateRandomId(countRandomFilms);
+		} while (randomIdArray.includes(randomId));
+		randomIdArray.push(randomId);
+	}
+	randomIdArray.forEach((element) => {
+		forResponse.push(responseFromDB[element]);
+	});
+
+	res.json(forResponse);
+});
+app.get('/videostream', async (req, res) => {
+	const range = req.headers.range;
+	const params = req.query;
+	// console.log(range);
+	// if (!range) {
+	// 	res.status(400).send('Requires Range header');
+	// }
+
+	const responseFromDB = await sequelize.models.Films.findOne({
+		where: {
+			id: params.id,
+		},
+	});
+
+	// const chunkSize = 10 ** 6;
+
+	const videoPath = './assets/' + responseFromDB.urlVideo;
+	// const videoSize = fs.statSync(videoPath).size;
+	// const start = Number(range.replace(/\D/g, ''));
+	// const end = Math.min(start + chunkSize, videoSize - 1);
+	// const contentLength = end - start + 1;
+	const headers = {
+		'Access-Control-Allow-Origin': '*',
+		// 'Content-Range': `bytes ${start}-${end}/${videoSize}`,
+		// 'Accept-Ranges': 'bytes',
+		// 'Content-Length': contentLength,
+		// 'Content-Type': 'video/mp4',
+	};
+	res.contentType('flv');
+	res.writeHead(206, headers);
+
+	var proc = ffmpeg(videoPath)
+		// use the 'flashvideo' preset (located in /lib/presets/flashvideo.js)
+		.preset('flashvideo')
+		// setup event handlers
+		.on('start', (cmd) => {
+			console.log(cmd);
+		})
+		.on('end', function () {
+			console.log('file has been converted succesfully');
+		})
+		.on('error', function (err) {
+			console.log('an error happened: ' + err.message);
+		})
+		// save to stream
+		.pipe(res, { end: true });
+});
+
+// 	console.log(videoPath);
+// 	const videoStream = fs.createReadStream(videoPath, {
+// 		start,
+// 		end,
+// 	});
+
+// 	videoStream.pipe(res);
+// });
+
+//post
+
 app.post('/api/testPost', async (req, res) => {
 	console.log(req.body);
 	const returnedValue = await createTestWrite(req.body);
@@ -203,27 +341,6 @@ app.post('/api/Users/authorization', async (req, res) => {
 		res.json('Неверный пароль');
 	}
 });
-app.get('/api/Presets/getPresets', async (req, res) => {
-	try {
-		Jwt.verify(
-			req.headers.authorization,
-			process.env.SECRET,
-			async (error, decoded) => {
-				if (error) {
-					throw 'Bad access token';
-				} else {
-					const responseFromDB = await sequelize.models.Presets.findAll({
-						where: { idUser: decoded.userID },
-					});
-
-					res.json({ profiles: responseFromDB });
-				}
-			}
-		);
-	} catch (error) {
-		res.json(error);
-	}
-});
 app.post('/api/Presets/savePreset', async (req, res) => {
 	Jwt.verify(
 		req.headers.authorization,
@@ -252,6 +369,9 @@ app.post('/api/Presets/savePreset', async (req, res) => {
 		}
 	);
 });
+
+//put
+
 app.put('/api/Presets/changePreset', async (req, res) => {
 	Jwt.verify(
 		req.headers.authorization,
@@ -279,6 +399,9 @@ app.put('/api/Presets/changePreset', async (req, res) => {
 		}
 	);
 });
+
+//delete
+
 app.delete('/api/Presets/deletePreset', async (req, res) => {
 	Jwt.verify(
 		req.headers.authorization,
@@ -295,4 +418,5 @@ app.delete('/api/Presets/deletePreset', async (req, res) => {
 		}
 	);
 });
+
 app.listen(5000);
