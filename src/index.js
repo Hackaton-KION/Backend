@@ -7,11 +7,15 @@ import cors from 'cors';
 import fileUpload from 'express-fileupload';
 import { exec } from 'child_process';
 import fs from 'fs';
+import fsAsync from 'node:fs/promises';
+import utils from 'node:util';
+import { extname } from 'node:path';
+
 dotenv.config();
 // Connect to database
 const sequelize = new Sequelize('KION_Server', 'postgres', '1234', {
 	host: 'localhost',
-	dialect: 'postgres' /* one of 'mysql' | 'mariadb' | 'postgres' | 'mssql' */,
+	dialect: 'postgres',
 });
 
 try {
@@ -70,6 +74,10 @@ function createTableFilms() {
 				allowNull: false,
 			},
 			urlPreprocessedVideo: {
+				type: DataTypes.STRING,
+				allowNull: false,
+			},
+			manifestURL: {
 				type: DataTypes.STRING,
 				allowNull: false,
 			},
@@ -144,6 +152,7 @@ async function createTestWrite(data) {
 			login: data.login,
 			password: await hash(data.password),
 		});
+
 		return 'ok';
 	} catch (error) {
 		console.log(error.parent.detail);
@@ -151,7 +160,7 @@ async function createTestWrite(data) {
 	}
 }
 
-function generateRandomId(countRandomFilms) {
+function generateRandomNumber(countRandomFilms) {
 	return Math.floor(Math.random() * countRandomFilms);
 }
 
@@ -161,7 +170,7 @@ app.use(fileUpload());
 app.use(json());
 app.use(
 	cors({
-		origin: 'http://localhost:3000',
+		origin: /localhost/,
 		methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
 		preflightContinue: true,
 		optionsSuccessStatus: 204,
@@ -200,7 +209,7 @@ app.get('/api/presets/getPresets', async (req, res) => {
 		res.json(error);
 	}
 });
-app.get('/api/films/', async (req, res) => {
+app.get('/api/films', async (req, res) => {
 	const responseFromDB = await sequelize.models.Films.findAll({
 		where: {
 			title: {
@@ -210,80 +219,93 @@ app.get('/api/films/', async (req, res) => {
 	});
 	res.json(responseFromDB);
 });
+
 app.get('/api/films/random', async (req, res) => {
-	const responseFromDB = await sequelize.models.Films.findAll({
+	const films = await sequelize.models.Films.findAll({
 		limit: 100,
 	});
 
 	const countRandomFilms = 5;
 
-	const allId = [];
-	responseFromDB.forEach((element) => {
-		allId.push(element.id);
-	});
-	const randomIdArray = [];
-	const forResponse = [];
-
-	for (let i = 0; i < countRandomFilms; i++) {
-		// const forResponse = [];
-		// const randomId = allId[generateRandomId()];
-		// console.log(randomId);
-		// forResponse.push(responseFromDB[randomId]);
-		let randomId;
-		do {
-			randomId = generateRandomId(countRandomFilms);
-		} while (randomIdArray.includes(randomId));
-		randomIdArray.push(randomId);
+	if (countRandomFilms >= films.length) {
+		res.json(films);
+		return;
 	}
-	randomIdArray.forEach((element) => {
-		forResponse.push(responseFromDB[element]);
+
+	const randomFilms = [];
+
+	for (let i = 0; i < countRandomFilms; ) {
+		const index = generateRandomNumber(films.length);
+		const film = films[index];
+
+		if (randomFilms.includes(film)) {
+			continue;
+		}
+
+		randomFilms.push(film);
+		i++;
+	}
+
+	res.json(randomFilms);
+});
+
+app.get('/api/films/:id', async (req, res) => {
+	const { id } = req.params;
+	const film = await sequelize.models.Films.findOne({
+		where: {
+			id,
+		},
 	});
 
-	res.json(forResponse);
+	if (!film) {
+		res.status(404).json('Not found');
+		return;
+	}
+
+	res.json(film);
 });
 
 //post
 
-app.post('/api/films/addFilm', async (req, res) => {
-	const newFilm = req.files.Film;
-	const newPrev = req.files.preview;
+app.post('/api/films/add', async (req, res) => {
+	const { preview, film } = req.files;
 
-	const newFilmName = newFilm.name.split('.')[0];
+	const fileName = film.name.split('.')[0].split(' ').join('_');
 
-	const newPath = './assets/segments/' + `${newFilmName}/`;
-	console.log(newFilmName);
-	fs.mkdir('./assets/segments/' + `${newFilmName}`, (err) => {
-		console.log(err);
+	const extension = extname(film.name);
+
+	const basePath = `segments/${fileName}/`;
+	const url = `/static/${basePath}`;
+	const path = `./assets/${basePath}`;
+
+	await fsAsync.mkdir(path, {
+		recursive: true,
 	});
-	const newFilmPath = newPath + newFilm.name;
-	newFilm.mv(newFilmPath);
-	newPrev.mv(newPath + newPrev.name);
+
+	const filmPath = path + fileName + extension;
+
+	film.mv(filmPath);
+	preview.mv(path + preview.name);
 
 	exec(
-		`start /b ./ffmpeg-master-latest-win64-gpl-shared/bin/ffmpeg.exe -i ${newFilmPath} -y -level 3.0 -start_number 0 -hls_base_url segments -hls_segment_filename ./assets/segments/${newFilmName}/${newFilmName}%03d.ts -hls_time 5 -hls_list_size 0 -f dash ./assets/segments/${newFilmName}/${newFilmName}.mpd`,
-		(error, stdout, stderr) => {
+		`start /b ./ffmpeg-master-latest-win64-gpl-shared/bin/ffmpeg.exe -i ${filmPath} -y -level 3.0 -start_number 0 -hls_base_url segments -hls_segment_filename ${path}${fileName}%03d.ts -hls_time 5 -hls_list_size 0 -f dash ${path}${fileName}.mpd`,
+		async (error) => {
 			if (error) {
-				console.log(`error:\n\n\n ${error.message}`);
-				return;
+				return error;
 			}
-			if (stderr) {
-				console.log(`stderr: ${stderr}`);
-				return;
-			}
-			console.log(`stdout: ${stdout}`);
+			await sequelize.models.Films.create({
+				title: req.body.title || film.name,
+				description: req.body.description,
+				dateReleaseVideo: req.body.dateRelease || new Date(),
+				urlPreview: url + preview.name,
+				urlVideo: url + film.name,
+				urlPreprocessedVideo: url + film.name,
+				manifestURL: url + `${fileName}.mpd`,
+			});
+
+			res.json('200');
 		}
 	);
-
-	await sequelize.models.Films.create({
-		title: req.body.title || newFilm.name,
-		description: req.body.description,
-		dateReleaseVideo: req.body.dateRelease || new Date(),
-		urlPreview: newPath + newPrev.name,
-		urlVideo: newFilmPath,
-		urlPreprocessedVideo: newFilmPath,
-	});
-
-	res.json('200');
 });
 app.post('/api/users/registration', async (req, res) => {
 	console.log(req.body);
@@ -323,6 +345,8 @@ app.post('/api/users/authorization/login', async (req, res) => {
 		res.cookie('refreshToken', refreshToken, {
 			expires: new Date(Date.now() + 30 * 24 * 3600000),
 			httpOnly: true,
+			secure: true,
+			sameSite: 'none',
 		});
 
 		res.json({
