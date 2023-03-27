@@ -3,10 +3,10 @@ import express, { json } from 'express';
 import { Sequelize, DataTypes, Op } from 'sequelize';
 import { hash, verify } from 'argon2';
 import Jwt from 'jsonwebtoken';
-import ffmpeg from 'fluent-ffmpeg';
-import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import cors from 'cors';
-ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+import fileUpload from 'express-fileupload';
+import { exec } from 'child_process';
+import fs from 'fs';
 dotenv.config();
 // Connect to database
 const sequelize = new Sequelize('KION_Server', 'postgres', '1234', {
@@ -157,8 +157,17 @@ function generateRandomId(countRandomFilms) {
 
 const app = express();
 
+app.use(fileUpload());
 app.use(json());
-app.use(cors());
+app.use(
+	cors({
+		origin: 'http://localhost:3000',
+		methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+		preflightContinue: true,
+		optionsSuccessStatus: 204,
+		credentials: true,
+	})
+);
 app.use('/static', express.static('assets'));
 
 //api
@@ -170,7 +179,7 @@ app.get('/', (req, res) => {
 app.get('/api/ping', (req, res) => {
 	res.json('pong');
 });
-app.get('/api/Presets/getPresets', async (req, res) => {
+app.get('/api/presets/getPresets', async (req, res) => {
 	try {
 		Jwt.verify(
 			req.headers.authorization,
@@ -191,7 +200,7 @@ app.get('/api/Presets/getPresets', async (req, res) => {
 		res.json(error);
 	}
 });
-app.get('/api/Films/', async (req, res) => {
+app.get('/api/films/', async (req, res) => {
 	const responseFromDB = await sequelize.models.Films.findAll({
 		where: {
 			title: {
@@ -201,7 +210,7 @@ app.get('/api/Films/', async (req, res) => {
 	});
 	res.json(responseFromDB);
 });
-app.get('/api/Films/random', async (req, res) => {
+app.get('/api/films/random', async (req, res) => {
 	const responseFromDB = await sequelize.models.Films.findAll({
 		limit: 100,
 	});
@@ -232,73 +241,58 @@ app.get('/api/Films/random', async (req, res) => {
 
 	res.json(forResponse);
 });
-app.get('/videostream', async (req, res) => {
-	const range = req.headers.range;
-	const params = req.query;
-	// console.log(range);
-	// if (!range) {
-	// 	res.status(400).send('Requires Range header');
-	// }
-
-	const responseFromDB = await sequelize.models.Films.findOne({
-		where: {
-			id: params.id,
-		},
-	});
-
-	// const chunkSize = 10 ** 6;
-
-	const videoPath = './assets/' + responseFromDB.urlVideo;
-	// const videoSize = fs.statSync(videoPath).size;
-	// const start = Number(range.replace(/\D/g, ''));
-	// const end = Math.min(start + chunkSize, videoSize - 1);
-	// const contentLength = end - start + 1;
-	const headers = {
-		'Access-Control-Allow-Origin': '*',
-		// 'Content-Range': `bytes ${start}-${end}/${videoSize}`,
-		// 'Accept-Ranges': 'bytes',
-		// 'Content-Length': contentLength,
-		// 'Content-Type': 'video/mp4',
-	};
-	res.contentType('flv');
-	res.writeHead(206, headers);
-
-	var proc = ffmpeg(videoPath)
-		// use the 'flashvideo' preset (located in /lib/presets/flashvideo.js)
-		.preset('flashvideo')
-		// setup event handlers
-		.on('start', (cmd) => {
-			console.log(cmd);
-		})
-		.on('end', function () {
-			console.log('file has been converted succesfully');
-		})
-		.on('error', function (err) {
-			console.log('an error happened: ' + err.message);
-		})
-		// save to stream
-		.pipe(res, { end: true });
-});
-
-// 	console.log(videoPath);
-// 	const videoStream = fs.createReadStream(videoPath, {
-// 		start,
-// 		end,
-// 	});
-
-// 	videoStream.pipe(res);
-// });
 
 //post
 
-app.post('/api/testPost', async (req, res) => {
+app.post('/api/films/addFilm', async (req, res) => {
+	const newFilm = req.files.Film;
+	const newPrev = req.files.preview;
+
+	const newFilmName = newFilm.name.split('.')[0];
+
+	const newPath = './assets/segments/' + `${newFilmName}/`;
+	console.log(newFilmName);
+	fs.mkdir('./assets/segments/' + `${newFilmName}`, (err) => {
+		console.log(err);
+	});
+	const newFilmPath = newPath + newFilm.name;
+	newFilm.mv(newFilmPath);
+	newPrev.mv(newPath + newPrev.name);
+
+	exec(
+		`start /b ./ffmpeg-master-latest-win64-gpl-shared/bin/ffmpeg.exe -i ${newFilmPath} -y -level 3.0 -start_number 0 -hls_base_url segments -hls_segment_filename ./assets/segments/${newFilmName}/${newFilmName}%03d.ts -hls_time 5 -hls_list_size 0 -f dash ./assets/segments/${newFilmName}/${newFilmName}.mpd`,
+		(error, stdout, stderr) => {
+			if (error) {
+				console.log(`error:\n\n\n ${error.message}`);
+				return;
+			}
+			if (stderr) {
+				console.log(`stderr: ${stderr}`);
+				return;
+			}
+			console.log(`stdout: ${stdout}`);
+		}
+	);
+
+	await sequelize.models.Films.create({
+		title: req.body.title || newFilm.name,
+		description: req.body.description,
+		dateReleaseVideo: req.body.dateRelease || new Date(),
+		urlPreview: newPath + newPrev.name,
+		urlVideo: newFilmPath,
+		urlPreprocessedVideo: newFilmPath,
+	});
+
+	res.json('200');
+});
+app.post('/api/users/registration', async (req, res) => {
 	console.log(req.body);
 	const returnedValue = await createTestWrite(req.body);
 	console.log({ returned: returnedValue.replaceAll('"', "'") });
 	// res.send({ returned: returnedValue.replaceAll('"', 	"'") });
 	res.json(returnedValue.replaceAll('"', "'"));
 });
-app.post('/api/Users/authorization', async (req, res) => {
+app.post('/api/users/authorization/login', async (req, res) => {
 	const responseFromDB = await sequelize.models.Users.findOne({
 		where: { login: req.body.login },
 	});
@@ -329,7 +323,6 @@ app.post('/api/Users/authorization', async (req, res) => {
 		res.cookie('refreshToken', refreshToken, {
 			expires: new Date(Date.now() + 30 * 24 * 3600000),
 			httpOnly: true,
-			secure: true,
 		});
 
 		res.json({
@@ -341,7 +334,7 @@ app.post('/api/Users/authorization', async (req, res) => {
 		res.json('Неверный пароль');
 	}
 });
-app.post('/api/Presets/savePreset', async (req, res) => {
+app.post('/api/presets/savePreset', async (req, res) => {
 	Jwt.verify(
 		req.headers.authorization,
 		process.env.SECRET,
@@ -372,7 +365,7 @@ app.post('/api/Presets/savePreset', async (req, res) => {
 
 //put
 
-app.put('/api/Presets/changePreset', async (req, res) => {
+app.put('/api/presets/changePreset', async (req, res) => {
 	Jwt.verify(
 		req.headers.authorization,
 		process.env.SECRET,
@@ -402,7 +395,7 @@ app.put('/api/Presets/changePreset', async (req, res) => {
 
 //delete
 
-app.delete('/api/Presets/deletePreset', async (req, res) => {
+app.delete('/api/presets/deletePreset', async (req, res) => {
 	Jwt.verify(
 		req.headers.authorization,
 		process.env.SECRET,

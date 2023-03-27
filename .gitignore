@@ -3,3 +3,5 @@ dist
 .env
 ffmpeg-master-latest-win64-gpl-shared
 assets
+docs.txt
+index.html
