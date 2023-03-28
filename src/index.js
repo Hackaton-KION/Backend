@@ -1,6 +1,6 @@
 import * as dotenv from 'dotenv'; // хранение секретной фразы и конфиг
 import express, { json } from 'express';
-import { Sequelize, DataTypes} from 'sequelize'; //обеспечение работы с БД (подкл., запросы и т.д.)
+import { Sequelize, DataTypes } from 'sequelize'; //обеспечение работы с БД (подкл., запросы и т.д.)
 
 import cors from 'cors'; // политика безопасности накидывает хедеры для обеспечения нормальной работы сервера
 import fileUpload from 'express-fileupload'; // загрузка файлов на сервер
@@ -19,7 +19,7 @@ export const sequelize = new Sequelize('KION_Server', 'postgres', '1234', {
 try {
 	await sequelize.authenticate();
 	console.log('Connection has been established successfully.');
-	createTables();
+	await createTables();
 } catch (error) {
 	console.error('Unable to connect to the database:', error);
 }
@@ -87,17 +87,14 @@ function createTableFilms() {
 	);
 }
 function createTablePresets() {
+	const colorValidateOptions = {
+		min: 0,
+		max: 256,
+	};
 	const Presets = sequelize.define(
 		'Presets',
 		{
-			// Model attributes are defined here
-			idPreset: {
-				type: DataTypes.INTEGER,
-				allowNull: false,
-				primaryKey: true,
-				autoIncrement: true,
-			},
-			idUser: {
+			userId: {
 				type: DataTypes.INTEGER,
 				allowNull: true,
 				references: {
@@ -125,9 +122,31 @@ function createTablePresets() {
 				type: DataTypes.INTEGER,
 				allowNull: false,
 			},
-			epilepticSafe: {
+			offEpilepticScene: {
 				type: DataTypes.BOOLEAN,
 				allowNull: false,
+			},
+			enableCustomGamma: {
+				type: DataTypes.BOOLEAN,
+				allowNull: false,
+			},
+			redChanel: {
+				type: DataTypes.INTEGER,
+				allowNull: false,
+				validate: colorValidateOptions,
+				defaultValue: 255,
+			},
+			greenChanel: {
+				type: DataTypes.INTEGER,
+				allowNull: false,
+				validate: colorValidateOptions,
+				defaultValue: 255,
+			},
+			blueChanel: {
+				type: DataTypes.INTEGER,
+				allowNull: false,
+				validate: colorValidateOptions,
+				defaultValue: 255,
 			},
 		},
 		{
@@ -158,8 +177,6 @@ async function createTables() {
 // 	}
 // }
 
-
-
 const app = express();
 
 app.use(fileUpload());
@@ -178,7 +195,6 @@ app.use('/api/films', films);
 app.use('/api/presets', presets);
 app.use('/api/users', users);
 
-
 //api
 
 //get
@@ -188,6 +204,5 @@ app.get('/', (req, res) => {
 app.get('/api/ping', (req, res) => {
 	res.json('pong');
 });
-
 
 app.listen(5000);

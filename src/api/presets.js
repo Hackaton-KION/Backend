@@ -3,7 +3,7 @@ import { sequelize } from '..';
 
 const router = express.Router();
 
-router.get('/getPresets', async (req, res) => {
+router.get('/', async (req, res) => {
 	try {
 		Jwt.verify(
 			req.headers.authorization,
@@ -13,7 +13,7 @@ router.get('/getPresets', async (req, res) => {
 					throw 'Bad access token';
 				} else {
 					const responseFromDB = await sequelize.models.Presets.findAll({
-						where: { idUser: decoded.userID },
+						where: { userId: decoded.userID },
 					});
 
 					res.json({ profiles: responseFromDB });
@@ -25,7 +25,7 @@ router.get('/getPresets', async (req, res) => {
 	}
 });
 
-router.post('/savePreset', async (req, res) => {
+router.post('/create', async (req, res) => {
 	Jwt.verify(
 		req.headers.authorization,
 		process.env.SECRET,
@@ -34,16 +34,20 @@ router.post('/savePreset', async (req, res) => {
 				res.json(error);
 			} else {
 				try {
-					await sequelize.models.Presets.create({
-						idUser: decoded.userID,
+					const preset = await sequelize.models.Presets.create({
+						userId: decoded.userID,
 						name: req.body.name,
 						brightness: req.body.brightness,
 						contrast: req.body.contrast,
 						saturation: req.body.saturation,
 						sharpness: req.body.sharpness,
-						epilepticSafe: req.body.epilepticSafe,
+						offEpilepticScene: req.body.offEpilepticScene,
+						enableCustomGamma: req.body.enableCustomGamma,
+						redChanel: req.body.redChanel,
+						greenChanel: req.body.greenChanel,
+						blueChanel: req.body.blueChanel,
 					});
-					res.json('ok');
+					res.json(preset);
 				} catch (error) {
 					console.log(error);
 					console.log(error.parent.detail);
@@ -54,7 +58,7 @@ router.post('/savePreset', async (req, res) => {
 	);
 });
 
-router.put('/changePreset', async (req, res) => {
+router.put('/:id/update', async (req, res) => {
 	Jwt.verify(
 		req.headers.authorization,
 		process.env.SECRET,
@@ -62,19 +66,21 @@ router.put('/changePreset', async (req, res) => {
 			if (error) {
 				res.json(error);
 			} else {
-				const responseFromDB = await sequelize.models.Presets.findAll({
-					where: { idUser: decoded.userID },
-				});
 				await sequelize.models.Presets.update(
 					{
-						name: req.body.name || responseFromDB.name,
-						brightness: req.body.brightness || responseFromDB.brightness,
-						contrast: req.body.contrast || responseFromDB.contrast,
-						saturation: req.body.saturation || responseFromDB.saturation,
-						epilepticSafe:
-							req.body.epilepticSafe || responseFromDB.epilepticSafe,
+						userId: decoded.userID,
+						name: req.body.name,
+						brightness: req.body.brightness,
+						contrast: req.body.contrast,
+						saturation: req.body.saturation,
+						sharpness: req.body.sharpness,
+						offEpilepticScene: req.body.offEpilepticScene,
+						enableCustomGamma: req.body.enableCustomGamma,
+						redChanel: req.body.redChanel,
+						greenChanel: req.body.greenChanel,
+						blueChanel: req.body.blueChanel,
 					},
-					{ where: { idPreset: req.body.idPreset } }
+					{ where: { id: Number(req.params.id), userId: decoded.userID } }
 				);
 				res.json('ok');
 			}
@@ -82,7 +88,7 @@ router.put('/changePreset', async (req, res) => {
 	);
 });
 
-router.delete('/deletePreset', async (req, res) => {
+router.delete('/:id/remove', async (req, res) => {
 	Jwt.verify(
 		req.headers.authorization,
 		process.env.SECRET,
@@ -91,7 +97,7 @@ router.delete('/deletePreset', async (req, res) => {
 				res.json(error);
 			} else {
 				await sequelize.models.Presets.destroy({
-					where: { idPreset: req.body.idPreset, idUser: decoded.userID },
+					where: { id: Number(req.params.id), idUser: decoded.userID },
 				});
 				res.json('ok');
 			}
