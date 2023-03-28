@@ -11,6 +11,7 @@ function generateRandomNumber(countRandomFilms) {
 }
 
 router.get('/', async (req, res) => {
+	
 	const responseFromDB = await sequelize.models.Films.findAll({
 		where: {
 			title: {
