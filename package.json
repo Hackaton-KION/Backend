@@ -5,6 +5,7 @@
 	"main": "dist/index.js",
 	"type": "module",
 	"scripts": {
+		"start": "node index.js",
 		"watch": "rollup -c rollup.config.js --watch",
 		"serve": "nodemon ./dist/index.js",
 		"build": "rollup -c rollup.config.js",
@@ -16,7 +17,7 @@
 	"author": "",
 	"license": "ISC",
 	"dependencies": {
-		"argon2": "^0.30.3",
+		"bcrypt": "^5.1.0",
 		"cookie-parser": "^1.4.6",
 		"cors": "^2.8.5",
 		"dotenv": "^16.0.3",

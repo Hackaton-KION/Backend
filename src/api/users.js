@@ -1,6 +1,6 @@
 import express from 'express';
 import { sequelize } from '..';
-import { hash, verify } from 'argon2'; // для того, чтобы сверять пароли по хешу
+import { hash, compare } from 'bcrypt'; // для того, чтобы сверять пароли по хешу
 import Jwt from 'jsonwebtoken';// для авторизации пользователя (хранит логин и время жизни)
 
 
@@ -10,7 +10,7 @@ async function createTestWrite(data) {
 	try {
 		await sequelize.models.Users.create({
 			login: data.login,
-			password: await hash(data.password),
+			password: await hash(data.password, 4),
 		});
 
 		return 'ok';
@@ -33,11 +33,11 @@ router.post('/authorization/login', async (req, res) => {
 		where: { login: req.body.login },
 	});
 	console.log(typeof responseFromDB.dataValues.password);
-	console.log(await hash(req.body.password));
+	console.log(await hash(req.body.password, 4));
 
 	// console.log(req.headers.cookie.split(';'));
 
-	if (await verify(responseFromDB.dataValues.password, req.body.password)) {
+	if (await compare(responseFromDB.dataValues.password, req.body.password)) {
 		// Ваши данные для создания токена (payload)
 		const payload = {
 			userID: responseFromDB.dataValues.id,

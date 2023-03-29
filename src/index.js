@@ -11,18 +11,16 @@ import users from './api/users';
 
 dotenv.config();
 // Connect to database
-export const sequelize = new Sequelize('KION_Server', 'postgres', '1234', {
-	host: 'localhost',
-	dialect: 'postgres',
-});
-
-try {
-	await sequelize.authenticate();
-	console.log('Connection has been established successfully.');
-	await createTables();
-} catch (error) {
-	console.error('Unable to connect to the database:', error);
-}
+export const sequelize = new Sequelize(
+	process.env.DB_NAME,
+	process.env.DB_USER,
+	process.env.DB_PASSWORD,
+	{
+		host: process.env.DB_HOST,
+		port: process.env.DB_PORT,
+		dialect: 'postgres',
+	}
+);
 
 function createTableUsers() {
 	const Users = sequelize.define(
@@ -163,28 +161,13 @@ async function createTables() {
 	await sequelize.sync();
 }
 
-// async function createTestWrite(data) {
-// 	try {
-// 		await sequelize.models.Users.create({
-// 			login: data.login,
-// 			password: await hash(data.password),
-// 		});
-
-// 		return 'ok';
-// 	} catch (error) {
-// 		console.log(error.parent.detail);
-// 		return error.parent.detail;
-// 	}
-// }
-
 const app = express();
 
 app.use(fileUpload());
 app.use(json());
 app.use(
 	cors({
-		origin: /localhost/,
-		methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+		origin: '*',
 		preflightContinue: true,
 		optionsSuccessStatus: 204,
 		credentials: true,
@@ -196,13 +179,16 @@ app.use('/api/presets', presets);
 app.use('/api/users', users);
 
 //api
-
-//get
-app.get('/', (req, res) => {
-	res.sendFile('C:/Users/egorp/OneDrive/Документы/Backend/src/index.html');
-});
 app.get('/api/ping', (req, res) => {
 	res.json('pong');
 });
 
-app.listen(5000);
+app.listen(5000, async () => {
+	try {
+		await sequelize.authenticate();
+		console.log('Connection has been established successfully.');
+		await createTables();
+	} catch (error) {
+		console.error('Unable to connect to the database:', error);
+	}
+});
