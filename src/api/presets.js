@@ -1,37 +1,39 @@
 import express from 'express';
 import { sequelize } from '..';
+import { extractAccessToken } from '../lib';
+import Jwt from 'jsonwebtoken';
 
 const router = express.Router();
 
 router.get('/', async (req, res) => {
 	try {
 		Jwt.verify(
-			req.headers.authorization,
+			extractAccessToken(req.headers.authorization),
 			process.env.SECRET,
 			async (error, decoded) => {
 				if (error) {
-					throw 'Bad access token';
+					return res.status(401).json(error);
 				} else {
-					const responseFromDB = await sequelize.models.Presets.findAll({
-						where: { userId: decoded.userID },
+					const presets = await sequelize.models.Presets.findAll({
+						where: { userId: sequelize.or(decoded.userID, null) },
 					});
 
-					res.json({ profiles: responseFromDB });
+					res.json(presets);
 				}
 			}
 		);
 	} catch (error) {
-		res.json(error);
+		res.status(500).json(error);
 	}
 });
 
 router.post('/create', async (req, res) => {
 	Jwt.verify(
-		req.headers.authorization,
+		extractAccessToken(req.headers.authorization),
 		process.env.SECRET,
 		async (error, decoded) => {
 			if (error) {
-				res.json(error);
+				res.status(401).json(error);
 			} else {
 				try {
 					const preset = await sequelize.models.Presets.create({
@@ -49,9 +51,7 @@ router.post('/create', async (req, res) => {
 					});
 					res.json(preset);
 				} catch (error) {
-					console.log(error);
-					console.log(error.parent.detail);
-					res.json(error.parent.detail);
+					res.status(500).json(error.parent.detail);
 				}
 			}
 		}
@@ -60,11 +60,11 @@ router.post('/create', async (req, res) => {
 
 router.put('/:id/update', async (req, res) => {
 	Jwt.verify(
-		req.headers.authorization,
+		extractAccessToken(req.headers.authorization),
 		process.env.SECRET,
 		async (error, decoded) => {
 			if (error) {
-				res.json(error);
+				res.status(401).json(error);
 			} else {
 				await sequelize.models.Presets.update(
 					{
@@ -90,14 +90,14 @@ router.put('/:id/update', async (req, res) => {
 
 router.delete('/:id/remove', async (req, res) => {
 	Jwt.verify(
-		req.headers.authorization,
+		extractAccessToken(req.headers.authorization),
 		process.env.SECRET,
 		async (error, decoded) => {
 			if (error) {
-				res.json(error);
+				res.status(401).json(error);
 			} else {
 				await sequelize.models.Presets.destroy({
-					where: { id: Number(req.params.id), idUser: decoded.userID },
+					where: { id: Number(req.params.id), userId: decoded.userID },
 				});
 				res.json('ok');
 			}

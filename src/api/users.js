@@ -21,26 +21,20 @@ async function createTestWrite(data) {
 }
 
 router.post('/registration', async (req, res) => {
-	console.log(req.body);
 	const returnedValue = await createTestWrite(req.body);
-	console.log({ returned: returnedValue.replaceAll('"', "'") });
-	// res.send({ returned: returnedValue.replaceAll('"', 	"'") });
 	res.json(returnedValue.replaceAll('"', "'"));
 });
 
 router.post('/authorization/login', async (req, res) => {
-	const responseFromDB = await sequelize.models.Users.findOne({
+	const user = await sequelize.models.Users.findOne({
 		where: { login: req.body.login },
 	});
-	console.log(typeof responseFromDB.dataValues.password);
-	console.log(await hash(req.body.password, 4));
 
-	// console.log(req.headers.cookie.split(';'));
 
-	if (await compare(responseFromDB.dataValues.password, req.body.password)) {
+	if (await compare(req.body.password, user.dataValues.password)) {
 		// Ваши данные для создания токена (payload)
 		const payload = {
-			userID: responseFromDB.dataValues.id,
+			userID: user.dataValues.id,
 		};
 
 		// Ваш секретный ключ (необходим для верификации токена)
@@ -65,11 +59,11 @@ router.post('/authorization/login', async (req, res) => {
 
 		res.json({
 			accessToken: accessToken,
-			id: responseFromDB.dataValues.id,
-			login: responseFromDB.dataValues.login,
+			id: user.dataValues.id,
+			login: user.dataValues.login,
 		});
 	} else {
-		res.json('Неверный пароль');
+		res.status(400).json('Неверный пароль');
 	}
 });
 

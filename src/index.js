@@ -146,12 +146,18 @@ function createTablePresets() {
 				validate: colorValidateOptions,
 				defaultValue: 255,
 			},
+			isStandard: {
+				type: DataTypes.BOOLEAN,
+				allowNull: false,
+				defaultValue: false,
+			},
 		},
 		{
 			// Other model options go here
 			timestamps: false,
 		}
 	);
+
 }
 
 async function createTables() {
@@ -159,6 +165,50 @@ async function createTables() {
 	createTableFilms();
 	createTablePresets();
 	await sequelize.sync();
+
+
+	await sequelize.models.Presets.create({
+		userId: null,
+		name: 'Обычный',
+		brightness: 100,
+		contrast: 100,
+		saturation: 1,
+		sharpness: 100,
+		offEpilepticScene: false,
+		enableCustomGamma: false,
+		redChanel: 255,
+		greenChanel: 255,
+		blueChanel: 255,
+		isStandard: true,
+	});
+  await sequelize.models.Presets.create({
+		userId: null,
+		name: 'Обычный',
+		brightness: 100,
+		contrast: 100,
+		saturation: 1,
+		sharpness: 100,
+		offEpilepticScene: false,
+		enableCustomGamma: false,
+		redChanel: 255,
+		greenChanel: 255,
+		blueChanel: 255,
+		isStandard: true,
+	});
+  await sequelize.models.Presets.create({
+		userId: null,
+		name: 'Обычный',
+		brightness: 100,
+		contrast: 100,
+		saturation: 1,
+		sharpness: 100,
+		offEpilepticScene: false,
+		enableCustomGamma: false,
+		redChanel: 255,
+		greenChanel: 255,
+		blueChanel: 255,
+		isStandard: true,
+	});
 }
 
 const app = express();
@@ -167,9 +217,9 @@ app.use(fileUpload());
 app.use(json());
 app.use(
 	cors({
-		origin: '*',
-		preflightContinue: true,
-		optionsSuccessStatus: 204,
+		origin: (origin, callback) => {
+			return callback(null, true);
+		},
 		credentials: true,
 	})
 );

@@ -26,8 +26,8 @@ export default {
 	plugins: [
 		resolve(),
 		commonjs(),
-		babel({
-			babelHelpers: 'bundled',
-		}),
+		// babel({
+		// 	babelHelpers: 'bundled',
+		// }),
 	],
 };

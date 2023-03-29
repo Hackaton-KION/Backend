@@ -24,6 +24,8 @@ services:
       DB_PORT: 5432
       DB_HOST: db
       FFMPEG: ffmpeg
+    volumes:
+      - server-assets:/server/assets
     depends_on:
       - db
     restart:
@@ -31,3 +33,4 @@ services:
     container_name: api
 volumes:
   db-data:
+  server-assets:
