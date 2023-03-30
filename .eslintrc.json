@@ -5,13 +5,15 @@
 	},
 	"extends": [
 		"eslint:recommended",
+		"plugin:@typescript-eslint/recommended",
 		"plugin:sonarjs/recommended",
 		"plugin:import/recommended",
 		"plugin:import/warnings",
 		"airbnb-base",
 		"prettier"
 	],
-  "plugins": ["sonarjs"],
+	"parser": "@typescript-eslint/parser",
+	"plugins": ["sonarjs", "@typescript-eslint"],
 	"parserOptions": {
 		"ecmaFeatures": {
 			"jsx": true
@@ -54,20 +56,29 @@
 		"default-param-last": "warn",
 
 		/* IMPORT */
-		"import/extensions": [
-			"error",
-			"never",
-			{
-				"svg": "always",
-				"webp": "always",
-				"png": "always",
-				"jpeg": "always",
-				"jpg": "always",
-				"avif": "always",
-				"css": "always"
-			}
-		],
+		"import/extensions": "off",
 		"import/no-unresolved": 0,
-		"import/prefer-default-export": "off"
+		"import/prefer-default-export": "off",
+		"import/order": [
+			"error",
+			{
+				"groups": [
+					"builtin",
+					"external",
+					"internal",
+					"parent",
+					"sibling",
+					"index",
+					"object",
+					"type"
+				],
+				"pathGroups": [
+					{
+						"pattern": "@/**",
+						"group": "internal"
+					}
+				]
+			}
+		]
 	}
 }
