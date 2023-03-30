@@ -52,8 +52,12 @@
 		],
 		"no-restricted-exports": "off",
 		"prefer-arrow-callback": "off",
-		"no-shadow": "off",
+		"no-shadow": "warn",
 		"default-param-last": "warn",
+		"no-useless-constructor": "off",
+		"no-empty-function": "warn",
+		"class-methods-use-this": "off",
+		"camelcase": "warn",
 
 		/* IMPORT */
 		"import/extensions": "off",
@@ -79,6 +83,10 @@
 					}
 				]
 			}
-		]
+		],
+
+		/* TS */
+		"@typescript-eslint/no-unused-vars": ["error"],
+		"@typescript-eslint/no-empty-interface": ["off"]
 	}
 }
