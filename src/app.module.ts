@@ -8,8 +8,6 @@ import { UsersModule } from './users';
 import { FilmsModule } from './films';
 import { STATIC_DIR } from './const';
 
-console.log(path.join(__dirname, '..', STATIC_DIR));
-
 @Module({
 	imports: [
 		ConfigModule.forRoot({
@@ -20,9 +18,10 @@ console.log(path.join(__dirname, '..', STATIC_DIR));
 			isGlobal: true,
 		}),
 		ServeStaticModule.forRoot({
-			rootPath: path.join(__dirname, '..', STATIC_DIR),
+			rootPath: path.join(process.cwd(), STATIC_DIR),
+			serveRoot: path.join('/', STATIC_DIR),
 			serveStaticOptions: {
-				index: STATIC_DIR,
+				index: false,
 			},
 		}),
 		AuthModule,

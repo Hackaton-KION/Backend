@@ -2,6 +2,7 @@ import * as path from 'node:path';
 import * as multer from 'multer';
 
 export const STATIC_DIR = 'static';
+export const STATIC_DIR_PATH = path.resolve(__dirname);
 
 export const prepareName = (name: string) =>
 	name.split('.')[0].split(' ').join('_');
