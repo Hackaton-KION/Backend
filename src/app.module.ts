@@ -2,11 +2,13 @@ import * as path from 'node:path';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ServeStaticModule } from '@nestjs/serve-static';
+import { APP_GUARD } from '@nestjs/core';
 import { DatabaseModule } from './database';
-import { AuthModule } from './auth';
+import { AuthGuard, AuthModule } from './auth';
 import { UsersModule } from './users';
 import { FilmsModule } from './films';
 import { STATIC_DIR } from './const';
+import { PresetsModule } from './presets/presets.module';
 
 @Module({
 	imports: [
@@ -26,9 +28,15 @@ import { STATIC_DIR } from './const';
 		}),
 		AuthModule,
 		UsersModule,
-		FilmsModule
+		FilmsModule,
+		PresetsModule
 	],
 	controllers: [],
-	providers: [],
+	providers: [
+		{
+			provide: APP_GUARD,
+			useClass: AuthGuard,
+		}
+	],
 })
 export class AppModule {}

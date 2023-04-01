@@ -11,9 +11,10 @@ datasource db {
 }
 
 model User {
-  id       Int    @id @default(autoincrement())
-  login    String @db.VarChar(64)
-  password String @db.VarChar(255)
+  id       Int      @id @default(autoincrement())
+  login    String   @db.VarChar(64)
+  password String   @db.VarChar(255)
+  Preset   Preset[]
 
   @@unique([login])
 }
@@ -30,6 +31,7 @@ model Film {
 
 model Preset {
   id                Int     @id @default(autoincrement())
+  userId            Int?
   name              String  @db.VarChar(64)
   brightness        Int     @default(100)
   contrast          Int     @default(100)
@@ -41,4 +43,6 @@ model Preset {
   green             Int     @default(255)
   blue              Int     @default(255)
   isStandard        Boolean @default(false)
+
+  owner User? @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

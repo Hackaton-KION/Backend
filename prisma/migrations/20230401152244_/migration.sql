@@ -23,6 +23,7 @@ CREATE TABLE "Film" (
 -- CreateTable
 CREATE TABLE "Preset" (
     "id" SERIAL NOT NULL,
+    "userId" INTEGER,
     "name" VARCHAR(64) NOT NULL,
     "brightness" INTEGER NOT NULL DEFAULT 100,
     "contrast" INTEGER NOT NULL DEFAULT 100,
@@ -40,3 +41,6 @@ CREATE TABLE "Preset" (
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_login_key" ON "User"("login");
+
+-- AddForeignKey
+ALTER TABLE "Preset" ADD CONSTRAINT "Preset_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
