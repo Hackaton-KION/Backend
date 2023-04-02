@@ -1,22 +1,22 @@
-FROM node:lts-alpine as build
+FROM node:lts-alpine as builder
 WORKDIR /app
-COPY ./package*.json /app/
+COPY package*.json /app/
 RUN apk --no-cache add --virtual builds-deps build-base python3
-RUN npm i --ignore-scripts
-COPY . /app/
+RUN npm ci --ignore-scripts
+COPY ./prisma /app/prisma
+RUN npx prisma generate
+COPY . /app
 RUN npm run build
 
 FROM node:lts-alpine
-WORKDIR  /server
-RUN apk --no-cache add --virtual builds-deps build-base python3
+WORKDIR /app
+COPY --from=builder /app/package*.json ./
 RUN apk add  --no-cache ffmpeg
-COPY ./package*.json /server/
-RUN npm install node-gyp -g
-RUN npm install bcrypt -g
-RUN npm install bcrypt -save
-RUN npm install --ignore-scripts --omit=dev
-COPY --from=build  /app/dist ./
-RUN chown -Rh node:node /server
+RUN npm ci prisma --omit=dev --ignore-scripts
+RUN npm ci --omit=dev --ignore-scripts
+RUN npm rebuild
+COPY --from=builder /app/prisma ./prisma
+RUN npx prisma generate
+COPY --from=builder /app/dist ./
 EXPOSE 5000
-USER node
-CMD ["npm", "run", "start"]
+CMD ["npm", "run", "start:prod"]

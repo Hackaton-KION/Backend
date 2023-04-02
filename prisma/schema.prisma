@@ -1,0 +1,48 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       Int      @id @default(autoincrement())
+  login    String   @db.VarChar(64)
+  password String   @db.VarChar(255)
+  Preset   Preset[]
+
+  @@unique([login])
+}
+
+model Film {
+  id          Int      @id @default(autoincrement())
+  title       String   @db.VarChar(64)
+  description String   @db.VarChar(255)
+  releaseDate DateTime @db.Date()
+  preview     String?  @db.VarChar(255)
+  manifest    String   @db.VarChar(255)
+  video       String   @db.VarChar(255)
+}
+
+model Preset {
+  id                Int     @id @default(autoincrement())
+  userId            Int?
+  name              String  @db.VarChar(64)
+  brightness        Int     @default(100)
+  contrast          Int     @default(100)
+  saturation        Int     @default(1)
+  sharpness         Int     @default(100)
+  offEpilepticScene Boolean @default(false)
+  enableCustomGamma Boolean @default(false)
+  red               Int     @default(255)
+  green             Int     @default(255)
+  blue              Int     @default(255)
+  isStandard        Boolean @default(false)
+
+  owner User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
