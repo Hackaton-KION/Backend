@@ -9,16 +9,16 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import * as cookieParser from 'cookie-parser';
 import { AppModule } from '@/app.module';
 import { DatabaseService } from '@/database';
-import { STATIC_DIR } from './const';
+import { STATIC_DIR_PATH } from './const';
 
 async function bootstrap() {
 	const { PORT, } = process.env;
 	const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
 	const directories = [
-		fs.mkdir(path.join(STATIC_DIR, 'images'), { recursive: true, }),
-		fs.mkdir(path.join(STATIC_DIR, 'manifests'), { recursive: true, }),
-		fs.mkdir(path.join(STATIC_DIR, 'videos'), { recursive: true, })
+		fs.mkdir(path.join(STATIC_DIR_PATH, 'images'), { recursive: true, }),
+		fs.mkdir(path.join(STATIC_DIR_PATH, 'manifests'), { recursive: true, }),
+		fs.mkdir(path.join(STATIC_DIR_PATH, 'videos'), { recursive: true, })
 	];
 	await Promise.all(directories);
 
@@ -28,7 +28,7 @@ async function bootstrap() {
 	app.use(cookieParser());
 	app.enableCors({
 		credentials: true,
-		origin: 'localhost',
+		origin: (_, cb) => cb(null, true),
 	});
 	app.useGlobalPipes(
 		new ValidationPipe({
@@ -46,7 +46,7 @@ async function bootstrap() {
 		.setVersion('1.0.0')
 		.addCookieAuth(process.env.COOKIE_NAME)
 		.addBearerAuth()
-		.addServer('http://localhost:5000')
+		.addServer(`http://localhost:${PORT}`)
 		.addTag('api')
 		.build();
 
@@ -60,7 +60,7 @@ async function bootstrap() {
 		return Number(this);
 	};
 
-	await app.listen(PORT, '0.0.0.0', () => {
+	await app.listen(PORT, () => {
 		console.log(`server start PORT: ${PORT}`);
 	});
 }

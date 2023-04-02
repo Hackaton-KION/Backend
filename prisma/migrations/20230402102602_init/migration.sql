@@ -12,7 +12,7 @@ CREATE TABLE "Film" (
     "id" SERIAL NOT NULL,
     "title" VARCHAR(64) NOT NULL,
     "description" VARCHAR(255) NOT NULL,
-    "realeseDate" DATE NOT NULL,
+    "releaseDate" DATE NOT NULL,
     "preview" VARCHAR(255),
     "manifest" VARCHAR(255) NOT NULL,
     "video" VARCHAR(255) NOT NULL,

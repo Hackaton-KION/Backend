@@ -9,7 +9,7 @@ export class FilmDto implements FilmModel {
 
 	declare title: string;
 
-	declare realeseDate: Date;
+	declare releaseDate: Date;
 
 	declare preview: string;
 

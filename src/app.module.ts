@@ -7,8 +7,8 @@ import { DatabaseModule } from './database';
 import { AuthGuard, AuthModule } from './auth';
 import { UsersModule } from './users';
 import { FilmsModule } from './films';
-import { STATIC_DIR } from './const';
-import { PresetsModule } from './presets/presets.module';
+import { STATIC_DIR, STATIC_DIR_PATH } from './const';
+import { PresetsModule } from './presets';
 
 @Module({
 	imports: [
@@ -20,7 +20,7 @@ import { PresetsModule } from './presets/presets.module';
 			isGlobal: true,
 		}),
 		ServeStaticModule.forRoot({
-			rootPath: path.join(process.cwd(), STATIC_DIR),
+			rootPath: STATIC_DIR_PATH,
 			serveRoot: path.join('/', STATIC_DIR),
 			serveStaticOptions: {
 				index: false,

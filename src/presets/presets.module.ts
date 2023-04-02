@@ -7,6 +7,6 @@ import { PresetRepository } from './repositories';
 @Module({
 	imports: [AuthModule],
 	controllers: [PresetsController],
-	providers: [PresetsService, PresetRepository],
+	providers: [PresetRepository, PresetsService],
 })
 export class PresetsModule {}

@@ -37,7 +37,10 @@ export class FilmsService {
 		} catch (error) {
 			await new Promise((resolve, reject) => {
 				exec(
-					`${process.env.FFMPEG} -i ./${video.path} -y -level 3.0 -start_number 0 -hls_base_url segments -hls_segment_filename ${videoName}%03d.ts -hls_time 2 -hls_list_size 0 -fpsmax 60 -f dash ${manifestPath}`,
+					`${process.env.FFMPEG} -i ${path.join(
+						process.cwd(),
+						video.path
+					)} -y -level 3.0 -start_number 0 -hls_base_url segments -hls_segment_filename ${videoName}%03d.ts -hls_time 2 -hls_list_size 0 -fpsmax 60 -f dash ${manifestPath}`,
 					(err) => {
 						if (err) {
 							return reject(err);
@@ -51,10 +54,10 @@ export class FilmsService {
 
 		return this.filmRepository.create({
 			...rest,
-			realeseDate: new Date(),
-			video: video.path,
-			preview: path.join(STATIC_DIR, preview.path),
-			manifest: manifestPath,
+			releaseDate: new Date(),
+			video: path.join('/', video.path),
+			preview: path.join('/', preview.path),
+			manifest: path.join('/', manifestPath),
 		});
 	}
 }

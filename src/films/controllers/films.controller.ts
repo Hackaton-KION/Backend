@@ -9,6 +9,7 @@ import {
 	UploadedFiles
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { DisableAuthCheck } from '@/auth';
 import { FilmsService } from '../services/films.service';
 import { CreateFilmDto } from '../dto/create-film.dto';
 
@@ -21,7 +22,8 @@ export class FilmsController {
 		return this.filmsService.getAll();
 	}
 
-	@Get()
+	@DisableAuthCheck()
+	@Get('/random')
 	getRandom() {
 		return this.filmsService.getAll();
 	}

@@ -29,7 +29,6 @@ import {
 import { DisableAuthCheck } from '../lib';
 
 @ApiTags('Авторизация')
-@DisableAuthCheck()
 @Controller('auth')
 export class AuthController {
 	constructor(private readonly authService: AuthService) {}
@@ -41,6 +40,7 @@ export class AuthController {
 		type: AuthenticationResultDto,
 	})
 	@ApiCookieAuth()
+	@DisableAuthCheck()
 	@Get('/')
 	async authentication(
 		@Cookie(COOKIE_NAME) token: string | null,
@@ -68,6 +68,7 @@ export class AuthController {
 		type: SecurityUserDto,
 		description: 'Подтверждение успешности регистрации',
 	})
+	@DisableAuthCheck()
 	@Post('registration')
 	async registration(@Body() body: CreateUserDto): Promise<SecurityUserDto> {
 		return this.authService.registration(body);
@@ -79,6 +80,7 @@ export class AuthController {
 		type: AuthenticationResultDto,
 		description: 'Данные пользователя и пара токенов',
 	})
+	@DisableAuthCheck()
 	@Post('login')
 	async login(
 		@Res({ passthrough: true, }) res: Response,
@@ -113,6 +115,7 @@ export class AuthController {
 		type: TokensDto,
 		description: 'Обновленная пара токенов',
 	})
+	@DisableAuthCheck()
 	@ApiCookieAuth()
 	@Get('refresh')
 	async refresh(

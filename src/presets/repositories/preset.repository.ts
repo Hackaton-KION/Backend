@@ -1,3 +1,4 @@
+import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '@/database';
 import { Preset } from '../dto';
 import {
@@ -8,15 +9,21 @@ import {
 	UpdateParams
 } from './types';
 
+@Injectable()
 export class PresetRepository {
 	constructor(private readonly databaseService: DatabaseService) {}
 
 	async getAllByUserId(params: GetAllByUserIdParams): Promise<Preset[]> {
 		return this.databaseService.preset.findMany({
 			where: {
-				userId: {
-					in: [params.userId, null],
-				},
+				OR: [
+					{
+						userId: params.userId,
+					},
+					{
+						userId: null,
+					}
+				],
 			},
 		});
 	}
